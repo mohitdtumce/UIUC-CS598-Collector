@@ -23,10 +23,12 @@ public class Main {
 
     // Generate the file path
     String podData = GKEHelper.fetchPodMetrics();
+    System.out.println(podData);
     String podFilePath = StorageHelper.generateFilePath(region, clusterId, "PODHealth");
     StorageHelper.uploadToGCS(projectId, bucketName, podFilePath, podData);
 
     String nodeData = GKEHelper.fetchNodeMetrics();
+    System.out.println(nodeData);
     String nodeFileName = StorageHelper.generateFilePath(region, clusterId, "NodeHealth");
     StorageHelper.uploadToGCS(projectId, bucketName, nodeFileName, nodeData);
 

@@ -9,57 +9,15 @@ import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeList;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
-import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimList;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.Config;
 import java.io.IOException;
+import java.util.StringJoiner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GKEHelper {
-
-  public static String fetchPodMetrics() {
-    try {
-      // Specify the namespace, e.g., "default"
-      String namespace = "default";
-
-      // Initialize Kubernetes API client
-      ApiClient client = Config.defaultClient();
-      Configuration.setDefaultApiClient(client);
-
-      // Use the CoreV1 API to list pods
-      CoreV1Api api = new CoreV1Api();
-
-      // List pods in the specified namespace
-      V1PodList podList = api.listNamespacedPod(namespace).execute();
-
-      StringBuilder builder = new StringBuilder();
-      for (V1Pod pod : podList.getItems()) {
-        String podName = pod.getMetadata().getName();
-        builder.append(podName).append(",");
-        // Retrieve CPU and memory requests and limits (if specified in pod spec)
-        pod.getSpec().getContainers().forEach(container -> {
-          builder.append(container.getName()).append(",");
-          if (container.getResources() != null) {
-            if (container.getResources().getRequests() != null) {
-              builder.append(container.getResources().getRequests().get("cpu").getNumber())
-                  .append(",");
-              builder.append(container.getResources().getRequests().get("memory").getNumber())
-                  .append(",");
-              builder.append(
-                      container.getResources().getRequests().get("ephemeral-storage").getNumber())
-                  .append("\n");
-            }
-          }
-        });
-      }
-      return builder.toString();
-    } catch (IOException | ApiException e) {
-      System.err.println("Error listing pods or retrieving metrics: " + e.getMessage());
-      e.printStackTrace();
-    }
-    return "";
-  }
 
   public static String getGkeClusterInRegion(String projectId, String region, String clusterId) {
     String location = String.format("projects/%s/locations/%s/clusters/%s", projectId, region,
@@ -99,6 +57,51 @@ public class GKEHelper {
     }
   }
 
+  public static String fetchPodMetrics() {
+    try {
+      String namespace = "default";
+
+      // Initialize Kubernetes API client
+      ApiClient client = Config.defaultClient();
+      Configuration.setDefaultApiClient(client);
+      // Use the CoreV1 API to list pods
+      CoreV1Api api = new CoreV1Api();
+
+      StringJoiner podMetrics = new StringJoiner("\n");
+
+      V1PodList podList = api.listNamespacedPod(namespace).execute();
+      for (V1Pod pod : podList.getItems()) {
+        StringJoiner containerMetrics = new StringJoiner(",");
+
+        String podName = pod.getMetadata().getName();
+        containerMetrics.add(podName);
+
+        pod.getSpec().getContainers().forEach(container -> {
+          containerMetrics.add(container.getName());
+          if (container.getResources() != null && container.getResources().getRequests() != null) {
+            var requests = container.getResources().getRequests();
+            containerMetrics.add(
+                requests.get("cpu") != null ? requests.get("cpu").getNumber().toString() : "");
+            containerMetrics.add(
+                requests.get("memory") != null ? requests.get("memory").getNumber().toString()
+                    : "");
+            containerMetrics.add(
+                requests.get("ephemeral-storage") != null ? requests.get("ephemeral-storage")
+                    .getNumber().toString() : "");
+          }
+        });
+
+        podMetrics.add(containerMetrics.toString());
+      }
+      return podMetrics.toString();
+    } catch (ApiException e) {
+      Logger.getLogger(GKEHelper.class.getName())
+          .log(Level.SEVERE, "Error fetching pod metrics", e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return "";
+  }
 
   public static String fetchNodeMetrics() throws IOException {
     // Initialize Kubernetes API client
@@ -108,44 +111,35 @@ public class GKEHelper {
     // Use the CoreV1 API to list pods
     CoreV1Api api = new CoreV1Api();
 
-    StringBuilder builder = new StringBuilder();
+    StringJoiner nodesMetrics = new StringJoiner("\n");
     try {
+      StringJoiner nodeMetrics = new StringJoiner(",");
       V1NodeList nodeList = api.listNode().execute();
       for (V1Node node : nodeList.getItems()) {
         String nodeName = node.getMetadata().getName();
-        builder.append(nodeName).append(",");
+        nodeMetrics.add(nodeName);
 
-        if (node.getStatus() != null && node.getStatus().getCapacity() != null) {
-          builder.append(node.getStatus().getCapacity().get("cpu").getNumber()).append(",")
-              .append(node.getStatus().getCapacity().get("memory").getNumber()).append(",")
-              .append(node.getStatus().getCapacity().get("ephemeral-storage").getNumber())
-              .append(",");
-        }
+        var capacity = node.getStatus().getCapacity();
+        nodeMetrics.add(
+            capacity.get("cpu") != null ? capacity.get("cpu").getNumber().toString() : "");
+        nodeMetrics.add(
+            capacity.get("memory") != null ? capacity.get("memory").getNumber().toString() : "");
+        nodeMetrics.add(
+            capacity.get("ephemeral-storage") != null ? capacity.get("ephemeral-storage")
+                .getNumber().toString() : "");
+
+        var allocatable = node.getStatus().getAllocatable();
+        nodeMetrics.add(
+            allocatable.get("ephemeral-storage") != null ? allocatable.get("ephemeral-storage")
+                .getNumber().toString() : "");
 
       }
+      nodesMetrics.add(nodeMetrics.toString());
+      return nodesMetrics.toString();
     } catch (ApiException e) {
       System.err.println("Error fetching node metrics: " + e.getMessage());
       e.printStackTrace();
     }
-    return builder.toString();
-  }
-
-  private static String getPodStorageUsage(CoreV1Api api, String podName, String namespace) {
-    try {
-      // List PVCs in the specified namespace
-      V1PersistentVolumeClaimList pvcList = api.listNamespacedPersistentVolumeClaim(namespace)
-          .execute();
-
-      for (V1PersistentVolumeClaim pvc : pvcList.getItems()) {
-        // Check if PVC is bound to the pod
-        if (pvc.getMetadata().getName().equals(podName)) {
-          return pvc.getStatus().getPhase();
-        }
-      }
-
-    } catch (ApiException e) {
-      System.err.println("Error fetching storage usage for pod: " + e.getMessage());
-    }
-    return ",";
+    return "";
   }
 }
