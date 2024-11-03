@@ -16,6 +16,8 @@ dependencies {
     implementation 'com.google.cloud:google-cloud-dataproc'
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'com.google.cloud:google-cloud-container'
+    implementation 'com.google.api:gax'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
 
     implementation 'io.kubernetes:client-java:21.0.1'
 
