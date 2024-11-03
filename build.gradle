@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform('com.google.cloud:libraries-bom:26.50.0')
+    implementation 'com.google.cloud:google-cloud-monitoring'
+    implementation 'com.google.cloud:google-cloud-storage'
+    implementation 'com.google.cloud:google-cloud-dataproc'
+    implementation 'com.google.protobuf:protobuf-java'
+    implementation 'com.google.cloud:google-cloud-container'
+
+    implementation 'io.kubernetes:client-java:21.0.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+test {
+    useJUnitPlatform()
+}
