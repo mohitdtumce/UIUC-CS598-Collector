@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-public class StorageHelper {
+public class GCSHelper {
 
   public static void authenticateImplicitWithAdc(String project) {
     Storage storage = StorageOptions.newBuilder().setProjectId(project).build().getService();
@@ -27,18 +27,19 @@ public class StorageHelper {
     System.out.println("Listed all storage buckets.");
   }
 
-  public static String generateFilePath(String region, String clusterId, String fileName) {
+  public static String generateFilePath(String region, String fileName) {
     // Get current date in YYYY-MM-DD format
     String date = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         .withZone(ZoneId.systemDefault())
         .format(Instant.now());
 
     // Construct the file path
-    return String.format("%s/%s/%s/%s.csv", date, region, clusterId, fileName);
+    return String.format("%s/%s/%s.csv", date, region, fileName);
   }
 
-  public static void uploadToGCS(String projectId, String bucketName, String filePath, String data)
+  public static void uploadToGCS(String projectId, String region, String bucketName, String data)
       throws IOException {
+    String filePath = GCSHelper.generateFilePath(region, "InstanceHealth");
     Storage storage = StorageOptions.newBuilder().setProjectId(projectId).build().getService();
     BlobId blobId = BlobId.of(bucketName, filePath);
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();

@@ -13,6 +13,7 @@ dependencies {
     implementation platform('com.google.cloud:libraries-bom:26.50.0')
     implementation 'com.google.cloud:google-cloud-monitoring'
     implementation 'com.google.cloud:google-cloud-storage'
+    implementation 'com.google.cloud:google-cloud-compute'
     implementation 'com.google.cloud:google-cloud-dataproc'
     implementation 'com.google.protobuf:protobuf-java'
     implementation 'com.google.cloud:google-cloud-container'

@@ -9,6 +9,8 @@ import io.kubernetes.client.openapi.Configuration;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1NodeList;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaim;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimList;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.Config;
@@ -138,6 +140,37 @@ public class GKEHelper {
       return nodesMetrics.toString();
     } catch (ApiException e) {
       System.err.println("Error fetching node metrics: " + e.getMessage());
+      e.printStackTrace();
+    }
+    return "";
+  }
+
+  public static String fetchPodStorageMetrics(String namespace) throws IOException {
+    // Initialize Kubernetes API client
+    ApiClient client = Config.defaultClient();
+    Configuration.setDefaultApiClient(client);
+    // Use the CoreV1 API to list pods
+    CoreV1Api api = new CoreV1Api();
+    try {
+      V1PersistentVolumeClaimList pvcList = api.listNamespacedPersistentVolumeClaim(namespace)
+          .execute();
+      StringBuilder builder = new StringBuilder();
+
+      for (V1PersistentVolumeClaim pvc : pvcList.getItems()) {
+        String pvcName = pvc.getMetadata().getName();
+        String storageRequested = pvc.getSpec().getResources().getRequests().get("storage")
+            .getNumber().toString();
+        String storageUsed = pvc.getStatus().getCapacity().get("storage").getNumber().toString();
+
+        builder.append("PVC Name: ").append(pvcName).append("\n");
+        builder.append("Storage Requested: ").append(storageRequested).append("\n");
+        builder.append("Storage Used: ").append(storageUsed).append("\n");
+        builder.append("------\n");
+      }
+      return builder.toString();
+
+    } catch (ApiException e) {
+      System.err.println("Error fetching storage metrics: " + e.getMessage());
       e.printStackTrace();
     }
     return "";
