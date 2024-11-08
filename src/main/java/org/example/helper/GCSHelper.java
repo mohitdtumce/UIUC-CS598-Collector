@@ -10,9 +10,6 @@ import com.google.cloud.storage.StorageOptions;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 
 public class GCSHelper {
 
@@ -27,19 +24,9 @@ public class GCSHelper {
     System.out.println("Listed all storage buckets.");
   }
 
-  public static String generateFilePath(String region, String fileName) {
-    // Get current date in YYYY-MM-DD format
-    String date = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        .withZone(ZoneId.systemDefault())
-        .format(Instant.now());
-
-    // Construct the file path
-    return String.format("%s/%s/%s.csv", date, region, fileName);
-  }
-
   public static void uploadToGCS(String projectId, String region, String bucketName, String data)
       throws IOException {
-    String filePath = GCSHelper.generateFilePath(region, "InstanceHealth");
+    String filePath = "InstanceHealth.csv";
     Storage storage = StorageOptions.newBuilder().setProjectId(projectId).build().getService();
     BlobId blobId = BlobId.of(bucketName, filePath);
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();

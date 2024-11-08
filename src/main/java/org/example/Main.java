@@ -10,7 +10,7 @@ public class Main {
   public static void main(String[] args) throws Exception {
     String projectId = "mohitshr-learning";
     String region = "us-central1";
-    String bucketName = "mohitshr-project-gslb-us-east4";
+    String bucketName = "mohitshr-project-gslb-us-central1";
 
     StringJoiner joiner = new StringJoiner("\n");
     List<String> content = GCEHelper.fetchMetrics(projectId, region);
